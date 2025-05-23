@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Geheimes Wort Spiel (Online)</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f0f0f0;
+    }
+    .card {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    input, button {
+      padding: 10px;
+      margin: 5px 0;
+      font-size: 16px;
+    }
+    button {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>🎮 Geheimes Wort Spiel (Online)</h2>
+
+    <div id="setup">
+      <input id="room" placeholder="Spielcode" />
+      <button onclick="joinRoom()">Beitreten</button>
+    </div>
+
+    <div id="roleArea" style="display: none;">
+      <p id="roleInfo"></p>
+    </div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBwmodcWGM-CvJMSFFA7PkawuR_i2lRnUA",
+      authDomain: "imposter-game-4b787.firebaseapp.com",
+      databaseURL: "https://imposter-game-4b787-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "imposter-game-4b787",
+      storageBucket: "imposter-game-4b787.firebasestorage.app",
+      messagingSenderId: "345055548976",
+      appId: "1:345055548976:web:3ce94424c1904ed3c63ff5",
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const words = [
+      { secret: "Zahnarzt", covers: ["Beruf", "Medizin", "Praxis"] },
+      { secret: "Gitarre", covers: ["Instrument", "Musik", "Saiten"] },
+      { secret: "Kaffeemaschine", covers: ["Gerät", "Haushalt", "Küche"] },
+      { secret: "Regenschirm", covers: ["Schutz", "Wetter", "Gegenstand"] }
+    ];
+
+    function joinRoom() {
+      const roomCode = document.getElementById("room").value.trim();
+      if (!roomCode) return alert("Bitte gib einen Spielcode ein.");
+
+      const userId = Math.random().toString(36).substr(2, 9);
+      const userRef = db.ref(`rooms/${roomCode}/players/${userId}`);
+
+      userRef.set({ joined: true });
+      userRef.onDisconnect().remove();
+
+      db.ref(`rooms/${roomCode}/gameStarted`).once('value', (snap) => {
+        if (!snap.exists()) {
+          // Erstelle neues Spiel
+          const word = words[Math.floor(Math.random() * words.length)];
+          const allCovers = [...word.covers];
+          db.ref(`rooms/${roomCode}`).set({
+            secret: word.secret,
+            covers: allCovers,
+            gameStarted: true
+          });
+        }
+
+        // Spielerrolle bestimmen
+        db.ref(`rooms/${roomCode}`).once('value', (snap) => {
+          const data = snap.val();
+          const isImposter = Math.random() < 0.4; // 40% Imposter-Wahrscheinlichkeit
+          const cover = data.covers.pop() || "Unbekannt";
+          db.ref(`rooms/${roomCode}/covers`).set(data.covers);
+          const role = isImposter ? `Du bist Imposter. Dein Wort: ${cover}` : `Du bist kein Imposter. Dein Wort: ${data.secret}`;
+
+          document.getElementById("setup").style.display = "none";
+          document.getElementById("roleArea").style.display = "block";
+          document.getElementById("roleInfo").innerText = role;
+        });
+      });
+    }
+  </script>
+</body>
+</html>
