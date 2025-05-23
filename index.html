@@ -51,6 +51,10 @@
       font-weight: bold;
       color: #555;
     }
+    ul {
+      text-align: left;
+      padding-left: 20px;
+    }
   </style>
 </head>
 <body>
@@ -62,6 +66,12 @@
       <input id="playerCount" type="number" placeholder="Anzahl Spieler" min="1" />
       <button onclick="hostGame()">Als Host starten</button>
       <button onclick="joinRoom()">Beitreten</button>
+    </div>
+
+    <div id="lobby" style="display:none">
+      <h3>Lobby</h3>
+      <ul id="playerList"></ul>
+      <button onclick="startGame()">🎬 Spiel starten</button>
     </div>
 
     <div id="roleArea" style="display: none;">
@@ -116,6 +126,9 @@
       { secret: "Roboter", covers: ["Technik", "Maschine", "Automatisch"] }
     ];
 
+    let currentRoom = "";
+    let userId = Math.random().toString(36).substr(2, 9);
+
     function hostGame() {
       const roomCode = document.getElementById("room").value.trim();
       const playerCount = parseInt(document.getElementById("playerCount").value);
@@ -129,21 +142,26 @@
         covers: word.covers,
         gameStarted: false,
         imposterCount: imposterCount,
-        playerCount: playerCount
+        playerCount: playerCount,
+        players: {}
       });
 
-      alert("Lobby erstellt. Andere Spieler können jetzt beitreten. Wenn alle da sind, erneut auf Host klicken um zu starten.");
+      currentRoom = roomCode;
+      document.getElementById("setup").style.display = "none";
+      document.getElementById("lobby").style.display = "block";
+
+      updatePlayerList();
     }
 
     function joinRoom() {
       const roomCode = document.getElementById("room").value.trim();
       if (!roomCode) return alert("Bitte gib einen Spielcode ein.");
 
-      const userId = Math.random().toString(36).substr(2, 9);
       const userRef = db.ref(`rooms/${roomCode}/players/${userId}`);
-
       userRef.set({ joined: true });
       userRef.onDisconnect().remove();
+
+      currentRoom = roomCode;
 
       db.ref(`rooms/${roomCode}/gameStarted`).on('value', (snap) => {
         if (snap.val() === true) {
@@ -160,12 +178,31 @@
               roleInfo = `✅ Du bist kein Imposter. Dein Wort: ${data.secret}`;
             }
 
+            document.getElementById("lobby").style.display = "none";
             document.getElementById("setup").style.display = "none";
             document.getElementById("roleArea").style.display = "block";
             document.getElementById("roleInfo").innerText = roleInfo;
           });
         }
       });
+
+      db.ref(`rooms/${roomCode}/players`).on('value', () => updatePlayerList());
+    }
+
+    function updatePlayerList() {
+      db.ref(`rooms/${currentRoom}/players`).once('value', (snap) => {
+        const list = document.getElementById("playerList");
+        list.innerHTML = "";
+        snap.forEach(child => {
+          const li = document.createElement("li");
+          li.innerText = `Spieler: ${child.key}`;
+          list.appendChild(li);
+        });
+      });
+    }
+
+    function startGame() {
+      db.ref(`rooms/${currentRoom}/gameStarted`).set(true);
     }
   </script>
 </body>
