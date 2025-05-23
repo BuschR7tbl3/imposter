@@ -8,25 +8,48 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
   <style>
     body {
-      font-family: sans-serif;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       padding: 20px;
-      background: #f0f0f0;
+      background: linear-gradient(to right, #83a4d4, #b6fbff);
+      color: #333;
     }
     .card {
       max-width: 600px;
       margin: auto;
       background: white;
       padding: 30px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      border-radius: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      text-align: center;
     }
-    input, button {
-      padding: 10px;
-      margin: 5px 0;
+    input, button, select {
+      padding: 12px;
+      margin: 10px 0;
       font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    input {
+      background: #f3f3f3;
     }
     button {
-      cursor: pointer;
+      background-color: #4caf50;
+      color: white;
+      font-weight: bold;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    h2 {
+      color: #2c3e50;
+    }
+    #roleInfo {
+      font-size: 20px;
+      font-weight: bold;
+      color: #555;
     }
   </style>
 </head>
@@ -36,6 +59,8 @@
 
     <div id="setup">
       <input id="room" placeholder="Spielcode" />
+      <input id="playerCount" type="number" placeholder="Anzahl Spieler" min="1" />
+      <button onclick="hostGame()">Als Host starten</button>
       <button onclick="joinRoom()">Beitreten</button>
     </div>
 
@@ -62,8 +87,53 @@
       { secret: "Zahnarzt", covers: ["Beruf", "Medizin", "Praxis"] },
       { secret: "Gitarre", covers: ["Instrument", "Musik", "Saiten"] },
       { secret: "Kaffeemaschine", covers: ["Gerät", "Haushalt", "Küche"] },
-      { secret: "Regenschirm", covers: ["Schutz", "Wetter", "Gegenstand"] }
+      { secret: "Regenschirm", covers: ["Schutz", "Wetter", "Gegenstand"] },
+      { secret: "Pyramide", covers: ["Bauwerk", "Wüste", "Ägypten"] },
+      { secret: "Fernbedienung", covers: ["Elektronik", "Gerät", "Hand"] },
+      { secret: "Bleistift", covers: ["Schreiben", "Papier", "Holz"] },
+      { secret: "Mikrowelle", covers: ["Küche", "Hitze", "Gerät"] },
+      { secret: "Rolltreppe", covers: ["Bewegung", "Einkaufszentrum", "Stufen"] },
+      { secret: "Schneemann", covers: ["Winter", "Schnee", "Figur"] },
+      { secret: "Fußball", covers: ["Sport", "Rasen", "Tor"] },
+      { secret: "Banane", covers: ["Obst", "Gelb", "Frucht"] },
+      { secret: "Laptop", covers: ["Technik", "Computer", "Arbeit"] },
+      { secret: "Trompete", covers: ["Musik", "Blasinstrument", "Laut"] },
+      { secret: "Brille", covers: ["Sehen", "Augen", "Glas"] },
+      { secret: "Feuerwehr", covers: ["Einsatz", "Löschen", "Gefahr"] },
+      { secret: "Schokolade", covers: ["Süß", "Kakao", "Snack"] },
+      { secret: "Helikopter", covers: ["Fliegen", "Rotor", "Rettung"] },
+      { secret: "Bäckerei", covers: ["Brot", "Backen", "Ofen"] },
+      { secret: "Zug", covers: ["Schienen", "Transport", "Bahnhof"] },
+      { secret: "Campingplatz", covers: ["Natur", "Zelt", "Ferien"] },
+      { secret: "Kaktus", covers: ["Pflanze", "Wüste", "Stacheln"] },
+      { secret: "Schloss", covers: ["Gebäude", "König", "Historisch"] },
+      { secret: "Insel", covers: ["Meer", "Sand", "Urlaub"] },
+      { secret: "Mülltonne", covers: ["Abfall", "Tonne", "Straße"] },
+      { secret: "Brunnen", covers: ["Wasser", "Platz", "Alt"] },
+      { secret: "Fahrrad", covers: ["Fahren", "Pedale", "Zweirad"] },
+      { secret: "Kino", covers: ["Film", "Leinwand", "Popcorn"] },
+      { secret: "Taschenlampe", covers: ["Licht", "Batterie", "Dunkelheit"] },
+      { secret: "Roboter", covers: ["Technik", "Maschine", "Automatisch"] }
     ];
+
+    function hostGame() {
+      const roomCode = document.getElementById("room").value.trim();
+      const playerCount = parseInt(document.getElementById("playerCount").value);
+      if (!roomCode || isNaN(playerCount) || playerCount <= 0) return alert("Bitte gib einen gültigen Spielcode und Spieleranzahl ein.");
+
+      const word = words[Math.floor(Math.random() * words.length)];
+      const imposterCount = Math.floor(Math.random() * (playerCount + 1));
+
+      db.ref(`rooms/${roomCode}`).set({
+        secret: word.secret,
+        covers: word.covers,
+        gameStarted: false,
+        imposterCount: imposterCount,
+        playerCount: playerCount
+      });
+
+      alert("Lobby erstellt. Andere Spieler können jetzt beitreten. Wenn alle da sind, erneut auf Host klicken um zu starten.");
+    }
 
     function joinRoom() {
       const roomCode = document.getElementById("room").value.trim();
@@ -75,30 +145,26 @@
       userRef.set({ joined: true });
       userRef.onDisconnect().remove();
 
-      db.ref(`rooms/${roomCode}/gameStarted`).once('value', (snap) => {
-        if (!snap.exists()) {
-          // Erstelle neues Spiel
-          const word = words[Math.floor(Math.random() * words.length)];
-          const allCovers = [...word.covers];
-          db.ref(`rooms/${roomCode}`).set({
-            secret: word.secret,
-            covers: allCovers,
-            gameStarted: true
+      db.ref(`rooms/${roomCode}/gameStarted`).on('value', (snap) => {
+        if (snap.val() === true) {
+          db.ref(`rooms/${roomCode}`).once('value', (snap) => {
+            const data = snap.val();
+            const players = Object.keys(data.players || {});
+            const index = players.indexOf(userId);
+
+            let roleInfo = "";
+            if (index < data.imposterCount) {
+              const cover = data.covers[index % data.covers.length] || "Hinweis";
+              roleInfo = `🚨 Du bist Imposter. Dein Tipp: ${cover}`;
+            } else {
+              roleInfo = `✅ Du bist kein Imposter. Dein Wort: ${data.secret}`;
+            }
+
+            document.getElementById("setup").style.display = "none";
+            document.getElementById("roleArea").style.display = "block";
+            document.getElementById("roleInfo").innerText = roleInfo;
           });
         }
-
-        // Spielerrolle bestimmen
-        db.ref(`rooms/${roomCode}`).once('value', (snap) => {
-          const data = snap.val();
-          const isImposter = Math.random() < 0.4; // 40% Imposter-Wahrscheinlichkeit
-          const cover = data.covers.pop() || "Unbekannt";
-          db.ref(`rooms/${roomCode}/covers`).set(data.covers);
-          const role = isImposter ? `Du bist Imposter. Dein Wort: ${cover}` : `Du bist kein Imposter. Dein Wort: ${data.secret}`;
-
-          document.getElementById("setup").style.display = "none";
-          document.getElementById("roleArea").style.display = "block";
-          document.getElementById("roleInfo").innerText = role;
-        });
       });
     }
   </script>
