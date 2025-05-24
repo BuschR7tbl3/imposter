@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Geheimes Wort Spiel (Online)</title>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
@@ -62,8 +62,11 @@
     <h2>🎮 Geheimes Wort Spiel (Online)</h2>
 
     <div id="setup">
+      <input id="playerName" placeholder="Dein Name" />
       <input id="room" placeholder="Spielcode" />
-      <input id="playerCount" type="number" placeholder="Anzahl Spieler" min="1" />
+      <div id="hostOptions">
+        <input id="playerCount" type="number" placeholder="Anzahl Spieler" min="1" />
+      </div>
       <button onclick="hostGame()">Als Host starten</button>
       <button onclick="joinRoom()">Beitreten</button>
     </div>
@@ -103,27 +106,7 @@
       { secret: "Bleistift", covers: ["Schreiben", "Papier", "Holz"] },
       { secret: "Mikrowelle", covers: ["Küche", "Hitze", "Gerät"] },
       { secret: "Rolltreppe", covers: ["Bewegung", "Einkaufszentrum", "Stufen"] },
-      { secret: "Schneemann", covers: ["Winter", "Schnee", "Figur"] },
-      { secret: "Fußball", covers: ["Sport", "Rasen", "Tor"] },
-      { secret: "Banane", covers: ["Obst", "Gelb", "Frucht"] },
-      { secret: "Laptop", covers: ["Technik", "Computer", "Arbeit"] },
-      { secret: "Trompete", covers: ["Musik", "Blasinstrument", "Laut"] },
-      { secret: "Brille", covers: ["Sehen", "Augen", "Glas"] },
-      { secret: "Feuerwehr", covers: ["Einsatz", "Löschen", "Gefahr"] },
-      { secret: "Schokolade", covers: ["Süß", "Kakao", "Snack"] },
-      { secret: "Helikopter", covers: ["Fliegen", "Rotor", "Rettung"] },
-      { secret: "Bäckerei", covers: ["Brot", "Backen", "Ofen"] },
-      { secret: "Zug", covers: ["Schienen", "Transport", "Bahnhof"] },
-      { secret: "Campingplatz", covers: ["Natur", "Zelt", "Ferien"] },
-      { secret: "Kaktus", covers: ["Pflanze", "Wüste", "Stacheln"] },
-      { secret: "Schloss", covers: ["Gebäude", "König", "Historisch"] },
-      { secret: "Insel", covers: ["Meer", "Sand", "Urlaub"] },
-      { secret: "Mülltonne", covers: ["Abfall", "Tonne", "Straße"] },
-      { secret: "Brunnen", covers: ["Wasser", "Platz", "Alt"] },
-      { secret: "Fahrrad", covers: ["Fahren", "Pedale", "Zweirad"] },
-      { secret: "Kino", covers: ["Film", "Leinwand", "Popcorn"] },
-      { secret: "Taschenlampe", covers: ["Licht", "Batterie", "Dunkelheit"] },
-      { secret: "Roboter", covers: ["Technik", "Maschine", "Automatisch"] }
+      { secret: "Schneemann", covers: ["Winter", "Schnee", "Figur"] }
     ];
 
     let currentRoom = "";
@@ -132,6 +115,7 @@
     function hostGame() {
       const roomCode = document.getElementById("room").value.trim();
       const playerCount = parseInt(document.getElementById("playerCount").value);
+      const name = document.getElementById("playerName").value.trim() || "Spieler";
       if (!roomCode || isNaN(playerCount) || playerCount <= 0) return alert("Bitte gib einen gültigen Spielcode und Spieleranzahl ein.");
 
       const word = words[Math.floor(Math.random() * words.length)];
@@ -144,49 +128,47 @@
         imposterCount: imposterCount,
         playerCount: playerCount,
         players: {}
+      }).then(() => {
+        db.ref(`rooms/${roomCode}/players/${userId}`).set({ joined: true, name });
+        db.ref(`rooms/${roomCode}/players/${userId}`).onDisconnect().remove();
+
+        currentRoom = roomCode;
+        document.getElementById("setup").style.display = "none";
+        document.getElementById("lobby").style.display = "block";
+
+        document.getElementById("hostOptions").style.display = "block";
+
+        db.ref(`rooms/${currentRoom}/players`).on('value', () => updatePlayerList());
+        db.ref(`rooms/${currentRoom}/gameStarted`).on('value', (snap) => {
+          if (snap.val() === true) {
+            showRole();
+          }
+        });
       });
-
-      currentRoom = roomCode;
-      document.getElementById("setup").style.display = "none";
-      document.getElementById("lobby").style.display = "block";
-
-      updatePlayerList();
     }
 
     function joinRoom() {
       const roomCode = document.getElementById("room").value.trim();
+      const name = document.getElementById("playerName").value.trim() || "Spieler";
       if (!roomCode) return alert("Bitte gib einen Spielcode ein.");
 
       const userRef = db.ref(`rooms/${roomCode}/players/${userId}`);
-      userRef.set({ joined: true });
+      userRef.set({ joined: true, name });
       userRef.onDisconnect().remove();
 
       currentRoom = roomCode;
 
-      db.ref(`rooms/${roomCode}/gameStarted`).on('value', (snap) => {
+      document.getElementById("hostOptions").style.display = "none";
+
+      db.ref(`rooms/${currentRoom}/players`).on('value', () => updatePlayerList());
+      db.ref(`rooms/${currentRoom}/gameStarted`).on('value', (snap) => {
         if (snap.val() === true) {
-          db.ref(`rooms/${roomCode}`).once('value', (snap) => {
-            const data = snap.val();
-            const players = Object.keys(data.players || {});
-            const index = players.indexOf(userId);
-
-            let roleInfo = "";
-            if (index < data.imposterCount) {
-              const cover = data.covers[index % data.covers.length] || "Hinweis";
-              roleInfo = `🚨 Du bist Imposter. Dein Tipp: ${cover}`;
-            } else {
-              roleInfo = `✅ Du bist kein Imposter. Dein Wort: ${data.secret}`;
-            }
-
-            document.getElementById("lobby").style.display = "none";
-            document.getElementById("setup").style.display = "none";
-            document.getElementById("roleArea").style.display = "block";
-            document.getElementById("roleInfo").innerText = roleInfo;
-          });
+          showRole();
         }
       });
 
-      db.ref(`rooms/${roomCode}/players`).on('value', () => updatePlayerList());
+      document.getElementById("setup").style.display = "none";
+      document.getElementById("lobby").style.display = "block";
     }
 
     function updatePlayerList() {
@@ -194,8 +176,9 @@
         const list = document.getElementById("playerList");
         list.innerHTML = "";
         snap.forEach(child => {
+          const data = child.val();
           const li = document.createElement("li");
-          li.innerText = `Spieler: ${child.key}`;
+          li.innerText = `${data.name || "Spieler"}`;
           list.appendChild(li);
         });
       });
@@ -203,6 +186,29 @@
 
     function startGame() {
       db.ref(`rooms/${currentRoom}/gameStarted`).set(true);
+    }
+
+    function showRole() {
+      db.ref(`rooms/${currentRoom}`).once('value', (snap) => {
+        const data = snap.val();
+        if (!data) return alert("Raum nicht gefunden.");
+
+        const players = Object.keys(data.players || {});
+        const index = players.indexOf(userId);
+
+        let roleInfo = "";
+        if (index < data.imposterCount) {
+          const cover = data.covers[index % data.covers.length] || "Hinweis";
+          roleInfo = `🚨 Du bist Imposter. Dein Tipp: ${cover}`;
+        } else {
+          roleInfo = `✅ Du bist kein Imposter. Dein Wort: ${data.secret}`;
+        }
+
+        document.getElementById("lobby").style.display = "none";
+        document.getElementById("setup").style.display = "none";
+        document.getElementById("roleArea").style.display = "block";
+        document.getElementById("roleInfo").innerText = roleInfo;
+      });
     }
   </script>
 </body>
