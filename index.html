@@ -106,7 +106,17 @@
       { secret: "Bleistift", covers: ["Schreiben", "Papier", "Holz"] },
       { secret: "Mikrowelle", covers: ["Küche", "Hitze", "Gerät"] },
       { secret: "Rolltreppe", covers: ["Bewegung", "Einkaufszentrum", "Stufen"] },
-      { secret: "Schneemann", covers: ["Winter", "Schnee", "Figur"] }
+      { secret: "Schneemann", covers: ["Winter", "Schnee", "Figur"] },
+      { secret: "Taschenlampe", covers: ["Licht", "Gerät", "Hand"] },
+      { secret: "Segelboot", covers: ["Wasser", "Reise", "Segel"] },
+      { secret: "Wasserkocher", covers: ["Küche", "Wasser", "Gerät"] },
+      { secret: "Sonnenbrille", covers: ["Sommer", "Augen", "Accessoire"] },
+      { secret: "Briefkasten", covers: ["Post", "Haus", "Metall"] },
+      { secret: "Fahrradhelm", covers: ["Sicherheit", "Fahren", "Kopf"] },
+      { secret: "Fernseher", covers: ["Bildschirm", "Elektronik", "Sender"] },
+      { secret: "Notizbuch", covers: ["Papier", "Schreiben", "Buch"] },
+      { secret: "Toaster", covers: ["Frühstück", "Küche", "Gerät"] },
+      { secret: "Schlüssel", covers: ["Tür", "Metall", "Schloss"] }
     ];
 
     let currentRoom = "";
@@ -119,7 +129,19 @@
       if (!roomCode || isNaN(playerCount) || playerCount <= 0) return alert("Bitte gib einen gültigen Spielcode und Spieleranzahl ein.");
 
       const word = words[Math.floor(Math.random() * words.length)];
-      const imposterCount = Math.floor(Math.random() * (playerCount + 1));
+
+      let imposterCount;
+      const roll = Math.random();
+      if (roll < 0.05) {
+        imposterCount = 0;
+      } else if (roll < 0.80) {
+        imposterCount = 1;
+      } else if (roll < 0.95) {
+        imposterCount = Math.floor(Math.random() * (playerCount - 1)) + 2;
+        if (imposterCount > playerCount) imposterCount = playerCount;
+      } else {
+        imposterCount = playerCount;
+      }
 
       db.ref(`rooms/${roomCode}`).set({
         secret: word.secret,
@@ -135,8 +157,6 @@
         currentRoom = roomCode;
         document.getElementById("setup").style.display = "none";
         document.getElementById("lobby").style.display = "block";
-
-        document.getElementById("hostOptions").style.display = "block";
 
         db.ref(`rooms/${currentRoom}/players`).on('value', () => updatePlayerList());
         db.ref(`rooms/${currentRoom}/gameStarted`).on('value', (snap) => {
@@ -213,3 +233,4 @@
   </script>
 </body>
 </html>
+
