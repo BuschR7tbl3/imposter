@@ -79,6 +79,7 @@
 
     <div id="roleArea" style="display: none;">
       <p id="roleInfo"></p>
+      <button onclick="goToStart()">🔁 Zurück zum Start</button>
     </div>
   </div>
 
@@ -230,7 +231,10 @@
         document.getElementById("roleInfo").innerText = roleInfo;
       });
     }
+
+    function goToStart() {
+      location.reload();
+    }
   </script>
 </body>
 </html>
-
