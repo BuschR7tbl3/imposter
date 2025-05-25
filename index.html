@@ -85,13 +85,13 @@
 
   <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyBwmodcWGM-CvJMSFFA7PkawuR_i2lRnUA",
-      authDomain: "imposter-game-4b787.firebaseapp.com",
-      databaseURL: "https://imposter-game-4b787-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "imposter-game-4b787",
-      storageBucket: "imposter-game-4b787.firebasestorage.app",
-      messagingSenderId: "345055548976",
-      appId: "1:345055548976:web:3ce94424c1904ed3c63ff5",
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
 
     firebase.initializeApp(firebaseConfig);
@@ -117,7 +117,37 @@
       { secret: "Fernseher", covers: ["Bildschirm", "Elektronik", "Sender"] },
       { secret: "Notizbuch", covers: ["Papier", "Schreiben", "Buch"] },
       { secret: "Toaster", covers: ["Frühstück", "Küche", "Gerät"] },
-      { secret: "Schlüssel", covers: ["Tür", "Metall", "Schloss"] }
+      { secret: "Schlüssel", covers: ["Tür", "Metall", "Schloss"] },
+      { secret: "Kopfhörer", covers: ["Musik", "Ohr", "Elektronik"] },
+      { secret: "Trampolin", covers: ["Springen", "Sport", "Garten"] },
+      { secret: "Drucker", covers: ["Papier", "Technik", "Büro"] },
+      { secret: "Wasserflasche", covers: ["Trinken", "Plastik", "Sport"] },
+      { secret: "Kaktus", covers: ["Pflanze", "Wüste", "Stachel"] },
+      { secret: "Roller", covers: ["Fahren", "Straße", "Zwei Räder"] },
+      { secret: "Trommel", covers: ["Musik", "Instrument", "Rhythmus"] },
+      { secret: "Puzzle", covers: ["Spiel", "Teile", "Bild"] },
+      { secret: "Campingstuhl", covers: ["Outdoor", "Sitzen", "Klappbar"] },
+      { secret: "Bratpfanne", covers: ["Küche", "Kochen", "Pfanne"] },
+      { secret: "Waschmaschine", covers: ["Haushalt", "Wäsche", "Gerät"] },
+      { secret: "Taschenrechner", covers: ["Mathematik", "Zahlen", "Gerät"] },
+      { secret: "Sandburg", covers: ["Strand", "Bauen", "Sand"] },
+      { secret: "Zug", covers: ["Fahrt", "Schienen", "Bahn"] },
+      { secret: "Kühlschrank", covers: ["Küche", "Kalt", "Gerät"] },
+      { secret: "Heizung", covers: ["Wärme", "Haus", "Winter"] },
+      { secret: "Blumentopf", covers: ["Pflanze", "Erde", "Gefäß"] },
+      { secret: "Kopfkissen", covers: ["Bett", "Schlafen", "Weich"] },
+      { secret: "Handy", covers: ["Telefon", "Technik", "Smart"] },
+      { secret: "Schere", covers: ["Schneiden", "Papier", "Werkzeug"] },
+      { secret: "Mülltonne", covers: ["Abfall", "Straße", "Behälter"] },
+      { secret: "Luftballon", covers: ["Fest", "Helium", "Bunt"] },
+      { secret: "Koffer", covers: ["Reise", "Gepäck", "Tasche"] },
+      { secret: "Stempel", covers: ["Papier", "Büro", "Druck"] },
+      { secret: "Schlitten", covers: ["Winter", "Fahren", "Schnee"] },
+      { secret: "Besen", covers: ["Putzen", "Stiel", "Borsten"] },
+      { secret: "Thermometer", covers: ["Temperatur", "Messen", "Instrument"] },
+      { secret: "Rucksack", covers: ["Tragen", "Schule", "Tasche"] },
+      { secret: "Laterne", covers: ["Licht", "Tragen", "Nacht"] },
+      { secret: "Lineal", covers: ["Messen", "Schule", "Gerade"] }
     ];
 
     let currentRoom = "";
@@ -133,7 +163,7 @@
 
       let imposterCount;
       const roll = Math.random();
-      if (roll < 0.75) {
+      if (roll < 0.83) {
         imposterCount = 1;
       } else if (roll < 0.90) {
         imposterCount = Math.floor(Math.random() * (playerCount - 1)) + 2;
@@ -144,7 +174,9 @@
         imposterCount = 0;
       }
 
-      db.ref(`rooms/${roomCode}`).set({
+      const roomRef = db.ref(`rooms/${roomCode}`);
+
+      roomRef.set({
         secret: word.secret,
         covers: word.covers,
         gameStarted: false,
@@ -152,44 +184,28 @@
         playerCount: playerCount,
         players: {}
       }).then(() => {
-        db.ref(`rooms/${roomCode}/players/${userId}`).set({ joined: true, name });
-        db.ref(`rooms/${roomCode}/players/${userId}`).onDisconnect().remove();
+        const playerRef = roomRef.child(`players/${userId}`);
+        playerRef.set({ joined: true, name });
+        playerRef.onDisconnect().remove();
+
+        // Automatisches Entfernen des Raums, wenn alle Spieler weg sind
+        roomRef.child('players').on('value', snap => {
+          if (!snap.exists()) {
+            roomRef.remove();
+          }
+        });
 
         currentRoom = roomCode;
         document.getElementById("setup").style.display = "none";
         document.getElementById("lobby").style.display = "block";
 
-        db.ref(`rooms/${currentRoom}/players`).on('value', () => updatePlayerList());
-        db.ref(`rooms/${currentRoom}/gameStarted`).on('value', (snap) => {
+        roomRef.child("players").on('value', () => updatePlayerList());
+        roomRef.child("gameStarted").on('value', (snap) => {
           if (snap.val() === true) {
             showRole();
           }
         });
       });
-    }
-
-    function joinRoom() {
-      const roomCode = document.getElementById("room").value.trim();
-      const name = document.getElementById("playerName").value.trim() || "Spieler";
-      if (!roomCode) return alert("Bitte gib einen Spielcode ein.");
-
-      const userRef = db.ref(`rooms/${roomCode}/players/${userId}`);
-      userRef.set({ joined: true, name });
-      userRef.onDisconnect().remove();
-
-      currentRoom = roomCode;
-
-      document.getElementById("hostOptions").style.display = "none";
-
-      db.ref(`rooms/${currentRoom}/players`).on('value', () => updatePlayerList());
-      db.ref(`rooms/${currentRoom}/gameStarted`).on('value', (snap) => {
-        if (snap.val() === true) {
-          showRole();
-        }
-      });
-
-      document.getElementById("setup").style.display = "none";
-      document.getElementById("lobby").style.display = "block";
     }
 
     function updatePlayerList() {
@@ -238,3 +254,4 @@
   </script>
 </body>
 </html>
+
