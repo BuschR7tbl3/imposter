@@ -163,7 +163,7 @@
 
       let imposterCount;
       const roll = Math.random();
-      if (roll < 0.83) {
+      if (roll < 0.75) {
         imposterCount = 1;
       } else if (roll < 0.90) {
         imposterCount = Math.floor(Math.random() * (playerCount - 1)) + 2;
@@ -206,6 +206,30 @@
           }
         });
       });
+    }
+
+    function joinRoom() {
+      const roomCode = document.getElementById("room").value.trim();
+      const name = document.getElementById("playerName").value.trim() || "Spieler";
+      if (!roomCode) return alert("Bitte gib einen Spielcode ein.");
+
+      const userRef = db.ref(`rooms/${roomCode}/players/${userId}`);
+      userRef.set({ joined: true, name });
+      userRef.onDisconnect().remove();
+
+      currentRoom = roomCode;
+
+      document.getElementById("hostOptions").style.display = "none";
+
+      db.ref(`rooms/${currentRoom}/players`).on('value', () => updatePlayerList());
+      db.ref(`rooms/${currentRoom}/gameStarted`).on('value', (snap) => {
+        if (snap.val() === true) {
+          showRole();
+        }
+      });
+
+      document.getElementById("setup").style.display = "none";
+      document.getElementById("lobby").style.display = "block";
     }
 
     function updatePlayerList() {
@@ -254,4 +278,3 @@
   </script>
 </body>
 </html>
-
