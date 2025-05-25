@@ -163,12 +163,11 @@
 
       let imposterCount;
       const roll = Math.random();
-      if (roll < 0.75) {
+      if (roll < 0.95) {
         imposterCount = 1;
-      } else if (roll < 0.90) {
-        imposterCount = Math.floor(Math.random() * (playerCount - 1)) + 2;
-        if (imposterCount > playerCount) imposterCount = playerCount;
-      } else if (roll < 0.95) {
+      } else if (roll < 0.98) {
+        imposterCount = 2;
+      } else if (roll < 0.99) {
         imposterCount = playerCount;
       } else {
         imposterCount = 0;
