@@ -147,8 +147,39 @@
       { secret: "Thermometer", covers: ["Temperatur", "Messen", "Instrument"] },
       { secret: "Rucksack", covers: ["Tragen", "Schule", "Tasche"] },
       { secret: "Laterne", covers: ["Licht", "Tragen", "Nacht"] },
-      { secret: "Lineal", covers: ["Messen", "Schule", "Gerade"] }
+      { secret: "Lineal", covers: ["Messen", "Schule", "Gerade"] },
+      { secret: "Lampe", covers: ["Licht", "Glühbirne", "Tisch"] },
+      { secret: "Gabel", covers: ["Besteck", "Essen", "Zinken"] },
+      { secret: "Uhr", covers: ["Zeit", "Zeiger", "Wecker"] },
+      { secret: "Buch", covers: ["Lesen", "Seiten", "Wissen"] },
+      { secret: "Stuhl", covers: ["Sitzen", "Beine", "Möbel"] },
+      { secret: "Auto", covers: ["Fahren", "Motor", "Straße"] },
+      { secret: "Apfel", covers: ["Obst", "Baum", "Rot"] },
+      { secret: "Fenster", covers: ["Glas", "Haus", "Durchblick"] },
+      { secret: "Seife", covers: ["Hygiene", "Waschen", "Schaum"] },
+      { secret: "Rutsche", covers: ["Spielplatz", "Kinder", "Runter"] },
+      { secret: "Tafel", covers: ["Schule", "Kreide", "Schreiben"] },
+      { secret: "Spiegel", covers: ["Reflexion", "Glas", "Badezimmer"] },
+      { secret: "Kerze", covers: ["Licht", "Wachs", "Feuer"] },
+      { secret: "Zelt", covers: ["Camping", "Outdoor", "Stoff"] },
+      { secret: "Gießkanne", covers: ["Pflanzen", "Wasser", "Garten"] },
+      { secret: "Lupe", covers: ["Vergrößern", "Sehen", "Glas"] },
+      { secret: "Schublade", covers: ["Möbel", "Aufbewahrung", "Holz"] },
+      { secret: "Ventilator", covers: ["Luft", "Kühlen", "Gerät"] },
+      { secret: "Nagel", covers: ["Befestigung", "Metall", "Hammer"] },
+      { secret: "Fahrradklingel", covers: ["Rad", "Ton", "Lenker"] },
+      { secret: "Fernrohr", covers: ["Sehen", "Weit", "Objektiv"] },
+      { secret: "Tasse", covers: ["Trinken", "Heiß", "Henkel"] },
+      { secret: "Seil", covers: ["Ziehen", "Knoten", "Lang"] },
+      { secret: "Pinsel", covers: ["Malen", "Borsten", "Farbe"] },
+      { secret: "Wecker", covers: ["Zeit", "Morgens", "Klingeln"] },
+      { secret: "Schwamm", covers: ["Putzen", "Wasser", "Saugfähig"] },
+      { secret: "Batterie", covers: ["Strom", "Energie", "Elektronik"] },
+      { secret: "Steckdose", covers: ["Strom", "Wand", "Gerät"] }
+
     ];
+
+
 
     let currentRoom = "";
     let userId = Math.random().toString(36).substr(2, 9);
@@ -245,7 +276,20 @@
     }
 
     function startGame() {
-      db.ref(`rooms/${currentRoom}/gameStarted`).set(true);
+      db.ref(`rooms/${currentRoom}`).once('value', (snap) => {
+        const data = snap.val();
+        if (!data || !data.players) return;
+
+        const playerCount = Object.keys(data.players).length;
+        const expectedCount = data.playerCount;
+
+        if (playerCount < expectedCount) {
+          alert(`Es sind nur ${playerCount} von ${expectedCount} Spielern beigetreten.`);
+          return;
+        }
+
+        db.ref(`rooms/${currentRoom}/gameStarted`).set(true);
+      });
     }
 
     function showRole() {
@@ -277,3 +321,4 @@
   </script>
 </body>
 </html>
+h
